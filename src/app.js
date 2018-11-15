@@ -1,35 +1,35 @@
 const express = require('express');
 const app = express();
-const morgan = require('morgan');
-const path = require('path');
+const BodyParser = require('body-parser');
+
+//Conexion a la base de datos
 const mongoose = require('mongoose');
-
-//import routes
-const indexRoutes = require('./routes/index.js');
-
-//settings
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
-app.set('port', process.env.PORT || 3000);
-
-//middleware
-app.use(morgan('dev'));
-app.use(express.urlencoded({extended : false}));
-
-//routes
-app.use('/', indexRoutes);
-
-//conection to db
-mongoose.connect('mongodb://localhost/Pizza')
-.then(db => console.log('Db connected'))
-.catch(err => cdconsole.log(err));
+let dev_db_url = 'mongodb://localhost:27017/pizza';
+let mongoDB = process.env.MONGODB_URI || dev_db_url;
+mongoose.connect(mongoDB);
+mongoose.Promise = global.Promise;
+let db = mongoose.connection;
+db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
 
+app.use(BodyParser.urlencoded({extended:false}));
+app.use(BodyParser.json());
 
-    
+const pizzaRoutes = require('./routes/api');
 
+app.use('/pizza', pizzaRoutes);
 
-    app.listen(app.get('port'), () => {
-        console.log(`server on port ${app.get('port')}`);
+app.use((req, res, next) => {
+    const error = new Error('Not found');
+    error.status = 404;
+    next(error);
+});
+
+app.use((error, req, res, next) => {
+    res.status(error.status || 500);
+    res.json({
+        error: {
+            message: error.message
+        }
     });
-
+});
